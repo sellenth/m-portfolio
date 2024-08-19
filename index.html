@@ -1,9 +1,63 @@
+<!DOCTYPE html>
 <html>
-    <head>
+<head>
+    <title>PDF.js Viewer</title>
+</head>
+<body style="margin: 0px">
 
-    </head>
-    <body style="margin: 0px">
-        <object data="./1.pdf" width="100%" height="100%" type='application/pdf'/>
+<script src="//mozilla.github.io/pdf.js/build/pdf.mjs" type="module"></script>
 
-    </body>
+<script type="module">
+  // Configure the CORS header on the server if using absolute URLs.
+  var url = './1.pdf';
+  
+  // The PDF.js worker source.
+  var { pdfjsLib } = globalThis;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '//mozilla.github.io/pdf.js/build/pdf.worker.mjs';
+
+  // Asynchronous download of the PDF.
+  var loadingTask = pdfjsLib.getDocument(url);
+  loadingTask.promise.then(function(pdf) {
+    console.log('PDF loaded');
+
+    // Function to render a page
+    function renderPage(pageNumber) {
+      pdf.getPage(pageNumber).then(function(page) {
+        console.log('Page ' + pageNumber + ' loaded');
+
+        var scale = 1.5;
+        var viewport = page.getViewport({ scale: scale });
+
+        // Prepare canvas for the current page
+        var canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page';
+        var context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        document.body.appendChild(canvas);
+
+        // Render PDF page into canvas context
+        var renderContext = {
+          canvasContext: context,
+          viewport: viewport
+        };
+        var renderTask = page.render(renderContext);
+        renderTask.promise.then(function() {
+          console.log('Page ' + pageNumber + ' rendered');
+        });
+      });
+    }
+
+    // Fetch and render all pages
+    var numPages = pdf.numPages;
+    for (var pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+      renderPage(pageNumber);
+    }
+  }, function(reason) {
+    // PDF loading error
+    console.error(reason);
+  });
+</script>
+
+</body>
 </html>
